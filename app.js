@@ -1649,11 +1649,9 @@ function initializeAttackTypeChecker() {
 // ==========================================
 
 // メガシンカ専用画像のURL
-// 専用画像を用意できたポケモンから追加する
 const megaPokemonImages = {
     // 例：
     // 'メガガブリアス': '画像のURL',
-    // 'メガルカリオ': '画像のURL',
 };
 
 // ポケモン画像を作成
@@ -1673,16 +1671,15 @@ function createPokemonImage(pokemonName, info) {
     image.className = 'candidate-pokemon-image';
     image.loading = 'lazy';
 
-    // メガ専用画像が読み込めなければ通常画像に切り替える
-    if (megaImageUrl && normalImageUrl) {
-        image.onerror = function() {
-            image.onerror = null;
-            image.src = normalImageUrl;
-        };
-    }
+    let usingNormalImage = !megaImageUrl;
 
-    // 通常画像も読み込めない場合は非表示
     image.onerror = function() {
+        if (megaImageUrl && normalImageUrl && !usingNormalImage) {
+            usingNormalImage = true;
+            image.src = normalImageUrl;
+            return;
+        }
+
         image.style.display = 'none';
     };
 
