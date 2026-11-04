@@ -1644,7 +1644,50 @@ function initializeAttackTypeChecker() {
     container.classList.add('attack-type-image-grid');
 }
 
+// ==========================================
+// ポケモン画像の取得
+// ==========================================
 
+// メガシンカ専用画像のURL
+// 専用画像を用意できたポケモンから追加する
+const megaPokemonImages = {
+    // 例：
+    // 'メガガブリアス': '画像のURL',
+    // 'メガルカリオ': '画像のURL',
+};
+
+// ポケモン画像を作成
+function createPokemonImage(pokemonName, info) {
+    const image = document.createElement('img');
+
+    // 通常ポケモンの画像URL
+    const normalImageUrl = info.dexNo
+        ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${info.dexNo}.png`
+        : '';
+
+    // メガ専用画像が登録されていれば優先
+    const megaImageUrl = megaPokemonImages[pokemonName];
+
+    image.src = megaImageUrl || normalImageUrl;
+    image.alt = pokemonName;
+    image.className = 'candidate-pokemon-image';
+    image.loading = 'lazy';
+
+    // メガ専用画像が読み込めなければ通常画像に切り替える
+    if (megaImageUrl && normalImageUrl) {
+        image.onerror = function() {
+            image.onerror = null;
+            image.src = normalImageUrl;
+        };
+    }
+
+    // 通常画像も読み込めない場合は非表示
+    image.onerror = function() {
+        image.style.display = 'none';
+    };
+
+    return image;
+}
 // ==========================================
 // 攻撃タイプ補完を分析
 // ==========================================
