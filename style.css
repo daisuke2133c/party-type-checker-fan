@@ -1020,3 +1020,16 @@ button:active {
     color: #596579;
     font-size: 0.85em;
 }
+/* ポケモン画像 */
+.candidate-pokemon-image-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 8px 0;
+}
+
+.candidate-pokemon-image {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+}
