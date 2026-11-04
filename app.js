@@ -1929,7 +1929,25 @@ if (currentCard) {
     html += '</div>';
 
     resultDiv.innerHTML = html;
-    resultDiv.classList.add('show');
+
+// HTMLを画面に挿入した後で画像を追加する
+resultDiv.querySelectorAll('.candidate-pokemon').forEach(function(card) {
+    const nameElement = card.querySelector('strong');
+    const imageArea = card.querySelector('.candidate-pokemon-image-area');
+
+    if (!nameElement || !imageArea) {
+        return;
+    }
+
+    const pokemonName = nameElement.textContent.trim();
+    const info = pokemonDatabase[pokemonName];
+
+    if (info && info.dexNo) {
+        imageArea.appendChild(createPokemonImage(pokemonName, info));
+    }
+});
+
+resultDiv.classList.add('show');
 
     resultDiv.scrollIntoView({
         behavior: 'smooth',
