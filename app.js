@@ -1902,18 +1902,6 @@ function analyzeAttackTypeComplement() {
         </div>
     </div>
 `;
-                    const pokemonCards = resultDiv.querySelectorAll('.candidate-pokemon');
-const currentCard = pokemonCards[pokemonCards.length - 1];
-
-if (currentCard) {
-    const imageArea = currentCard.querySelector(
-        '.candidate-pokemon-image-area'
-    );
-
-    imageArea.appendChild(
-        createPokemonImage(pokemonName, info)
-    );
-}
                 });
             }
 
