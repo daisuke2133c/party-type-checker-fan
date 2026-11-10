@@ -80,7 +80,7 @@ p {
 }
 
 .page-tab.active {
-    background: linear-gradient(135deg, #E97878 0%, #b71c1c 100%);
+    background: linear-gradient(135deg, #E97878 0%, #D95757 100%);
     color: white;
     border-color: #E97878;
 }
@@ -151,7 +151,7 @@ p {
 
 .pokemon-dropdown:focus {
     outline: none;
-    box-shadow: 0 0 5px rgba(229, 57, 53, 0.25);
+    box-shadow: 0 0 5px rgba(233, 120, 120, 0.25);
 }
 
 .type-input-container {
@@ -174,7 +174,7 @@ p {
 
 .type-search-input:focus {
     outline: none;
-    box-shadow: 0 0 5px rgba(229, 57, 53, 0.25);
+    box-shadow: 0 0 5px rgba(233, 120, 120, 0.25);
 }
 
 .type-dropdown-list {
@@ -212,7 +212,7 @@ p {
 /* ================================= */
 
 button {
-    background: linear-gradient(135deg, #E97878 0%, #b71c1c 100%);
+    background: linear-gradient(135deg, #E97878 0%, #D95757 100%);
     color: white;
     padding: 15px 40px;
     border: none;
@@ -226,7 +226,7 @@ button {
 
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(229, 57, 53, 0.35);
+    box-shadow: 0 5px 20px rgba(217, 87, 87, 0.35);
 }
 
 button:active {
@@ -262,7 +262,7 @@ button:active {
 }
 
 .result-tab-btn.active {
-    background: linear-gradient(135deg, #E97878 0%, #b71c1c 100%);
+    background: linear-gradient(135deg, #E97878 0%, #D95757 100%);
     color: white;
     border-color: #E97878;
 }
@@ -963,7 +963,7 @@ button:active {
 }
 
 .site-credits a {
-    color: #c62828;
+    color: 	#D95757;
     overflow-wrap: anywhere;
 }
 
