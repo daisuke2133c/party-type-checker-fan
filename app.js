@@ -1846,8 +1846,6 @@ function analyzeAttackTypeComplement() {
     <div class="candidate-pokemon">
         <strong>${pokemonName}</strong>
 
-        <div class="candidate-pokemon-image-area">
-        </div>
 
         <div class="candidate-pokemon-types">
             ${pokemonTypeText}
@@ -1876,22 +1874,6 @@ function analyzeAttackTypeComplement() {
 
     resultDiv.innerHTML = html;
 
-// HTMLを画面に挿入した後で画像を追加する
-resultDiv.querySelectorAll('.candidate-pokemon').forEach(function(card) {
-    const nameElement = card.querySelector('strong');
-    const imageArea = card.querySelector('.candidate-pokemon-image-area');
-
-    if (!nameElement || !imageArea) {
-        return;
-    }
-
-    const pokemonName = nameElement.textContent.trim();
-    const info = pokemonDatabase[pokemonName];
-
-    if (info && info.dexNo) {
-        imageArea.appendChild(createPokemonImage(pokemonName, info));
-    }
-});
 
 resultDiv.classList.add('show');
 
