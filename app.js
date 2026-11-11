@@ -1189,46 +1189,25 @@ function displayAnalysisResult(myAnalysis, myParty, enemyAnalysis, enemyParty) {
     html += '</div>';
 
     const initialSide = myParty.length > 0 ? 'my' : 'enemy';
+    const initialComboSide = myParty.length >= 3 ? 'my' :
+        enemyParty.length >= 3 ? 'enemy' : initialSide;
 
-    // 全パーティ分析
     html += '<div class="result-tab-content active" id="tab-full-party">';
     html += createSideTabs('full', initialSide);
-
-    html += createSideContent(
-        'full-my', 'my',
-        myParty, myAnalysis, '自分'
-    );
-
-    html += createSideContent(
-        'full-enemy', 'enemy',
-        enemyParty, enemyAnalysis, '相手'
-    );
-
+    html += createSideContent('full-my', myParty, myAnalysis, '自分');
+    html += createSideContent('full-enemy', enemyParty, enemyAnalysis, '相手');
     html += '</div>';
-
-    // 3体組み合わせ
-    const initialComboSide = myParty.length >= 3
-        ? 'my'
-        : enemyParty.length >= 3
-            ? 'enemy'
-            : initialSide;
 
     html += '<div class="result-tab-content" id="tab-3combo">';
     html += createSideTabs('combo', initialComboSide);
 
-    html += `
-        <div class="analysis-side-content ${initialComboSide === 'my' ? 'active' : ''}"
-             data-side-content="combo-my">
-            ${displayThreePokemonCombinations(myParty, '自分')}
-        </div>
-    `;
+    html += `<div class="analysis-side-content ${initialComboSide === 'my' ? 'active' : ''}" data-side-content="combo-my">
+        ${displayThreePokemonCombinations(myParty, '自分')}
+    </div>`;
 
-    html += `
-        <div class="analysis-side-content ${initialComboSide === 'enemy' ? 'active' : ''}"
-             data-side-content="combo-enemy">
-            ${displayThreePokemonCombinations(enemyParty, '相手')}
-        </div>
-    `;
+    html += `<div class="analysis-side-content ${initialComboSide === 'enemy' ? 'active' : ''}" data-side-content="combo-enemy">
+        ${displayThreePokemonCombinations(enemyParty, '相手')}
+    </div>`;
 
     html += '</div>';
 
@@ -1239,23 +1218,15 @@ function displayAnalysisResult(myAnalysis, myParty, enemyAnalysis, enemyParty) {
 function createSideTabs(group, initialSide) {
     return `
         <div class="analysis-side-tabs" data-side-group="${group}">
-            <button class="analysis-side-btn ${initialSide === 'my' ? 'active' : ''}"
-                    data-side="${group}-my"
-                    ${group === 'full' ? '' : ''}>
-                👤 自分のパーティ
-            </button>
-            <button class="analysis-side-btn ${initialSide === 'enemy' ? 'active' : ''}"
-                    data-side="${group}-enemy">
-                🎯 相手のパーティ
-            </button>
+            <button class="analysis-side-btn ${initialSide === 'my' ? 'active' : ''}" data-side="${group}-my">👤 自分のパーティ</button>
+            <button class="analysis-side-btn ${initialSide === 'enemy' ? 'active' : ''}" data-side="${group}-enemy">🎯 相手のパーティ</button>
         </div>
     `;
 }
 
-function createSideContent(id, side, party, analysis, label) {
+function createSideContent(id, party, analysis, label) {
     return `
-        <div class="analysis-side-content ${id.endsWith('-' + side) ? 'active' : ''}"
-             data-side-content="${id}">
+        <div class="analysis-side-content ${id === 'full-my' ? 'active' : ''}" data-side-content="${id}">
             ${displaySinglePartyAnalysis(label, party, analysis)}
         </div>
     `;
@@ -1263,16 +1234,11 @@ function createSideContent(id, side, party, analysis, label) {
 
 function displaySinglePartyAnalysis(label, party, analysis) {
     if (party.length === 0) {
-        return `
-            <div class="warning">
-                ⚠️ ${label}のパーティにはポケモンが入力されていません。
-            </div>
-        `;
+        return `<div class="warning">⚠️ ${label}のパーティには入力がありません。</div>`;
     }
 
     let html = '<div class="result-section">';
-    html += `<h4>${label}のパーティ</h4>`;
-    html += '<div class="result-content">';
+    html += `<h4>${label}のパーティ</h4><div class="result-content">`;
 
     party.forEach(function(pokemon) {
         const typeStr = pokemon.types.map(function(type) {
@@ -1284,40 +1250,112 @@ function displaySinglePartyAnalysis(label, party, analysis) {
 
     html += '</div></div>';
     html += displayTypeWeaknessTable(label, analysis);
-
     return html;
 }
 
-// ==========================================
-// 結果タブの切り替え処理
-// ==========================================
+// 3体組み合わせ
+function displayThreePokemonCombinations(party, label) {
+    if (party.length < 3) {
+        return `<div class="result-section">
+            <h4>🎲 ${label}の3体組み合わせ</h4>
+            <div class="warning">
+                ⚠️ 3体組み合わせには3匹以上必要です。現在は${party.length}匹です。
+            </div>
+        </div>`;
+    }
 
+    const combinations = [];
+
+    for (let i = 0; i < party.length; i++) {
+        for (let j = i + 1; j < party.length; j++) {
+            for (let k = j + 1; k < party.length; k++) {
+                const combo = [party[i], party[j], party[k]];
+                const analysis = analyzeOwnPartyWeakness(combo);
+
+                const consistentTypes = Object.keys(analysis.typeStatus).filter(function(type) {
+                    return analysis.typeStatus[type].isConsistent;
+                });
+
+                combinations.push({
+                    names: combo.map(function(p) {
+                        return p.name;
+                    }),
+                    types: consistentTypes
+                });
+            }
+        }
+    }
+
+    combinations.sort(function(a, b) {
+        return a.types.length - b.types.length;
+    });
+
+    let html = '<div class="result-section">';
+    html += `<h4>🎲 ${label}の3体組み合わせ</h4>`;
+    html += '<p>一貫タイプが少ない順に表示しています。</p>';
+
+    combinations.forEach(function(combo, index) {
+        html += '<div class="combo-result">';
+        html += `<strong>${index + 1}. ${combo.names.join(' + ')}</strong>`;
+
+        if (combo.types.length === 0) {
+            html += '<div>✅ 一貫タイプなし</div>';
+        } else {
+            html += `<div>⚠️ 一貫タイプ ${combo.types.length}つ: `;
+            html += combo.types.map(function(type) {
+                return `<span class="type-badge type-${type}">${getTypeNameJP(type)}</span>`;
+            }).join(' ');
+            html += '</div>';
+        }
+
+        html += '</div>';
+    });
+
+    html += '</div>';
+    return html;
+}
+
+// タブ切り替え
 function setupResultTabs() {
-    const tabButtons = document.querySelectorAll('.result-tab-btn');
-    const tabContents = document.querySelectorAll('.result-tab-content');
-    
-    tabButtons.forEach(function(button) {
+    const result = document.getElementById('analysisResult');
+
+    result.querySelectorAll('.result-tab-btn').forEach(function(button) {
         button.addEventListener('click', function() {
-            const tabName = button.dataset.tab;
-            
-            // 全ボタンのアクティブクラスを削除
-            tabButtons.forEach(function(btn) {
+            result.querySelectorAll('.result-tab-btn').forEach(function(btn) {
                 btn.classList.remove('active');
             });
-            
-            // 全コンテンツを非表示
-            tabContents.forEach(function(content) {
+
+            result.querySelectorAll('.result-tab-content').forEach(function(content) {
                 content.classList.remove('active');
             });
-            
-            // クリックされたボタンをアクティブに
+
             button.classList.add('active');
-            
-            // 対応するコンテンツを表示
-            const content = document.getElementById('tab-' + tabName);
-            if (content) {
-                content.classList.add('active');
-            }
+
+            const content = result.querySelector('#tab-' + button.dataset.tab);
+            if (content) content.classList.add('active');
+        });
+    });
+
+    result.querySelectorAll('.analysis-side-tabs').forEach(function(tabGroup) {
+        const group = tabGroup.dataset.sideGroup;
+
+        tabGroup.querySelectorAll('.analysis-side-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                tabGroup.querySelectorAll('.analysis-side-btn').forEach(function(btn) {
+                    btn.classList.remove('active');
+                });
+
+                button.classList.add('active');
+
+                const parent = tabGroup.parentElement;
+
+                parent.querySelectorAll(`[data-side-content^="${group}-"]`).forEach(function(content) {
+                    content.classList.remove('active');
+                });
+
+                const target = parent.querySelector(`[data-side-content="${button.dataset.side}"]`);
+                if (target) target.classList.add('active');
+            });
         });
     });
 }
