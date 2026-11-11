@@ -729,58 +729,23 @@ function updateTypeInputColor(input) {
 // ==========================================
 
 function analyzeParty() {
+    const myParty = getPartyData('myPokemon');
+    const enemyParty = getPartyData('enemyPokemon');
 
-    console.log('パーティ分析開始');
-
-
-    const myParty =
-        getPartyData('myPokemon');
-
-
-    const enemyParty =
-        getPartyData('enemyPokemon');
-
-
-    console.log(
-        '自分のパーティ:',
-        myParty
-    );
-
-
-    console.log(
-        '相手のパーティ:',
-        enemyParty
-    );
-
-
-    // 入力チェック
-
-    if (myParty.length === 0) {
-
+    if (myParty.length === 0 && enemyParty.length === 0) {
         showResult(
-            '<div class="warning">' +
-            '⚠️ 最低1匹以上ポケモン（またはタイプ）を入力してください' +
-            '</div>'
+            '<div class="warning">⚠️ 自分または相手のパーティに1匹以上入力してください。</div>'
         );
-
         return;
-
     }
 
+    const myAnalysis = myParty.length > 0
+        ? analyzeOwnPartyWeakness(myParty)
+        : null;
 
-    // 分析
-
-    const myAnalysis =
-        analyzeOwnPartyWeakness(myParty);
-
-
-    const enemyAnalysis =
-        enemyParty.length > 0
-            ? analyzeOwnPartyWeakness(enemyParty)
-            : null;
-
-
-    // 結果表示
+    const enemyAnalysis = enemyParty.length > 0
+        ? analyzeOwnPartyWeakness(enemyParty)
+        : null;
 
     displayAnalysisResult(
         myAnalysis,
@@ -788,7 +753,6 @@ function analyzeParty() {
         enemyAnalysis,
         enemyParty
     );
-
 }
 
 
@@ -1216,185 +1180,111 @@ function getTypeMultiplier(
 // パーティ分析結果を表示
 // ==========================================
 
-function displayAnalysisResult(
-    myAnalysis,
-    myParty,
-    enemyAnalysis,
-    enemyParty
-) {
+function displayAnalysisResult(myAnalysis, myParty, enemyAnalysis, enemyParty) {
+    let html = '<div class="result-title">📊 パーティ分析結果</div>';
 
-    let html =
-        '<div class="result-title">' +
-        '📊 パーティ弱点分析結果' +
-        '</div>';
-
-    // 結果表示タブ
     html += '<div class="result-tabs">';
     html += '<button class="result-tab-btn active" data-tab="full-party">📊 全パーティ分析</button>';
     html += '<button class="result-tab-btn" data-tab="3combo">🎲 3体組み合わせ</button>';
     html += '</div>';
 
-    // 全パーティ分析タブ
+    const initialSide = myParty.length > 0 ? 'my' : 'enemy';
+
+    // 全パーティ分析
     html += '<div class="result-tab-content active" id="tab-full-party">';
+    html += createSideTabs('full', initialSide);
 
-    // 自分のパーティ
+    html += createSideContent(
+        'full-my', 'my',
+        myParty, myAnalysis, '自分'
+    );
 
-    html +=
-        '<div class="result-section">';
-
-    html +=
-        '<h4>👤 自分のパーティ</h4>';
-
-    html +=
-        '<div class="result-content">';
-
-
-    myParty.forEach(function(p) {
-
-        const typeStr =
-            p.types
-            .map(function(t) {
-                return `<span class="type-badge type-${t}">${getTypeNameJP(t)}</span>`;
-            })
-            .join(' / ');
-
-
-        html +=
-            `<div>• ${p.name} (${typeStr})</div>`;
-
-    });
-
+    html += createSideContent(
+        'full-enemy', 'enemy',
+        enemyParty, enemyAnalysis, '相手'
+    );
 
     html += '</div>';
-    html += '</div>';
 
+    // 3体組み合わせ
+    const initialComboSide = myParty.length >= 3
+        ? 'my'
+        : enemyParty.length >= 3
+            ? 'enemy'
+            : initialSide;
 
-    // 自分の一貫タイプ
-
-    html +=
-        displayTypeWeaknessTable(
-            '自分',
-            myAnalysis
-        );
-
-
-    // 相手
-
-    if (enemyParty.length > 0) {
-
-        html +=
-            '<div class="result-section">';
-
-        html +=
-            '<h4>🎯 相手のパーティ</h4>';
-
-        html +=
-            '<div class="result-content">';
-
-
-        enemyParty.forEach(function(p) {
-
-            const typeStr =
-                p.types
-                .map(function(t) {
-                    return `<span class="type-badge type-${t}">${getTypeNameJP(t)}</span>`;
-                })
-                .join(' / ');
-
-
-            html +=
-                `<div>• ${p.name} (${typeStr})</div>`;
-
-        });
-
-
-        html += '</div>';
-        html += '</div>';
-
-
-        html +=
-            displayTypeWeaknessTable(
-                '相手',
-                enemyAnalysis
-            );
-
-    }
-
-    html += '</div>'; // end tab-full-party
-
-    // 3体組み合わせタブ
     html += '<div class="result-tab-content" id="tab-3combo">';
-    html += displayThreePokemonCombinations(myParty);
-    html += '</div>'; // end tab-3combo
+    html += createSideTabs('combo', initialComboSide);
+
+    html += `
+        <div class="analysis-side-content ${initialComboSide === 'my' ? 'active' : ''}"
+             data-side-content="combo-my">
+            ${displayThreePokemonCombinations(myParty, '自分')}
+        </div>
+    `;
+
+    html += `
+        <div class="analysis-side-content ${initialComboSide === 'enemy' ? 'active' : ''}"
+             data-side-content="combo-enemy">
+            ${displayThreePokemonCombinations(enemyParty, '相手')}
+        </div>
+    `;
+
+    html += '</div>';
 
     showResult(html);
-
-    // タブ切り替えのイベントリスナー設定
-    setTimeout(function() {
-        setupResultTabs();
-    }, 0);
-
+    setupResultTabs();
 }
 
-// ==========================================
-// 3体の組み合わせを表示
-// ==========================================
+function createSideTabs(group, initialSide) {
+    return `
+        <div class="analysis-side-tabs" data-side-group="${group}">
+            <button class="analysis-side-btn ${initialSide === 'my' ? 'active' : ''}"
+                    data-side="${group}-my"
+                    ${group === 'full' ? '' : ''}>
+                👤 自分のパーティ
+            </button>
+            <button class="analysis-side-btn ${initialSide === 'enemy' ? 'active' : ''}"
+                    data-side="${group}-enemy">
+                🎯 相手のパーティ
+            </button>
+        </div>
+    `;
+}
 
-function displayThreePokemonCombinations(myParty) {
-    // 6体から3体の組み合わせをすべて生成
-    const combinations = [];
-    
-    for (let i = 0; i < myParty.length; i++) {
-        for (let j = i + 1; j < myParty.length; j++) {
-            for (let k = j + 1; k < myParty.length; k++) {
-                const combo = [myParty[i], myParty[j], myParty[k]];
-                const analysis = analyzeOwnPartyWeakness(combo);
-                const consistentCount = Object.keys(analysis.typeStatus).filter(function(type) {
-                    return analysis.typeStatus[type].isConsistent;
-                }).length;
-                
-                combinations.push({
-                    pokemonIndices: [i, j, k],
-                    pokemonNames: [myParty[i].name, myParty[j].name, myParty[k].name],
-                    analysis: analysis,
-                    consistentCount: consistentCount
-                });
-            }
-        }
+function createSideContent(id, side, party, analysis, label) {
+    return `
+        <div class="analysis-side-content ${id.endsWith('-' + side) ? 'active' : ''}"
+             data-side-content="${id}">
+            ${displaySinglePartyAnalysis(label, party, analysis)}
+        </div>
+    `;
+}
+
+function displaySinglePartyAnalysis(label, party, analysis) {
+    if (party.length === 0) {
+        return `
+            <div class="warning">
+                ⚠️ ${label}のパーティにはポケモンが入力されていません。
+            </div>
+        `;
     }
-    
-    // 一貫タイプの数でソート（少ない順）
-    combinations.sort(function(a, b) {
-        return a.consistentCount - b.consistentCount;
-    });
-    
+
     let html = '<div class="result-section">';
-    html += '<h4>🎲 パーティ3体の組み合わせ</h4>';
-    html += '<p style="font-size: 0.9em; color: #666; margin: 10px 0;">一貫タイプが少ない順に表示（バランスの良い順）</p>';
-    
-    combinations.forEach(function(combo, index) {
-        html += '<div class="combo-result" style="margin: 15px 0; padding: 12px; background: #f5f5f5; border-left: 4px solid #667eea; border-radius: 4px;">';
-        html += `<strong>${index + 1}. ${combo.pokemonNames.join(' + ')}</strong>`;
-        html += '<div style="margin-top: 8px; font-size: 0.95em;">';
-        
-        const consistentTypes = Object.keys(combo.analysis.typeStatus).filter(function(type) {
-            return combo.analysis.typeStatus[type].isConsistent;
-        });
-        
-        if (consistentTypes.length === 0) {
-            html += '<span style="color: #28a745; font-weight: bold;">✅ 一貫タイプなし</span>';
-        } else {
-            html += `<span style="color: #dc3545; font-weight: bold;">⚠️ 一貫タイプ ${consistentTypes.length} つ: </span>`;
-            html += consistentTypes.map(function(type) {
-                return `<span class="type-badge type-${type}" style="display: inline-block; margin: 2px 2px 2px 0;">${getTypeNameJP(type)}</span>`;
-            }).join('');
-        }
-        
-        html += '</div>';
-        html += '</div>';
+    html += `<h4>${label}のパーティ</h4>`;
+    html += '<div class="result-content">';
+
+    party.forEach(function(pokemon) {
+        const typeStr = pokemon.types.map(function(type) {
+            return `<span class="type-badge type-${type}">${getTypeNameJP(type)}</span>`;
+        }).join(' / ');
+
+        html += `<div>• ${pokemon.name} (${typeStr})</div>`;
     });
-    
-    html += '</div>';
+
+    html += '</div></div>';
+    html += displayTypeWeaknessTable(label, analysis);
+
     return html;
 }
 
