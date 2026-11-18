@@ -1231,7 +1231,160 @@ function createSideContent(id, party, analysis, label) {
         </div>
     `;
 }
+// ==========================================
+// 防御補完おすすめポケモンを表示
+// ==========================================
 
+function displayDefenseRecommendations(party, analysis) {
+
+    // 現在のパーティで一貫している攻撃タイプを取得
+    const consistentTypes = Object.keys(analysis.typeStatus).filter(function(type) {
+        return analysis.typeStatus[type].isConsistent;
+    });
+
+    let html = '<div class="result-section">';
+    html += '<h4>🛡️ 防御補完おすすめ</h4>';
+
+    // 一貫タイプがなければ終了
+    if (consistentTypes.length === 0) {
+        html += '<div class="success">✅ 現在、一貫しているタイプはありません。</div>';
+        html += '</div>';
+        return html;
+    }
+
+    // 現在のパーティにいるポケモン名
+    const existingNames = party.map(function(pokemon) {
+        return pokemon.name;
+    });
+
+    const candidates = [];
+
+    // 登録されている全ポケモンを調べる
+    Object.keys(pokemonDatabase).forEach(function(pokemonName) {
+
+        const info = pokemonDatabase[pokemonName];
+
+        if (!info || !Array.isArray(info.types) || info.types.length === 0) {
+            return;
+        }
+
+        // すでにパーティにいるポケモンは除外
+        if (existingNames.includes(pokemonName)) {
+            return;
+        }
+
+        // 特性ごとに別候補として調べる
+        const abilities = Array.isArray(info.abilities) && info.abilities.length > 0
+            ? [...new Set(info.abilities)]
+            : [''];
+
+        abilities.forEach(function(ability) {
+
+            const candidatePokemon = {
+                name: pokemonName,
+                types: info.types,
+                ability: ability
+            };
+
+            const coveredTypes = [];
+            const fourTimesWeakTypes = [];
+
+            // 現在の一貫タイプを受けられるか調べる
+            consistentTypes.forEach(function(attackType) {
+
+                const multiplier = getTypeMultiplierWithAbility(
+                    attackType,
+                    candidatePokemon
+                );
+
+                // 半減以下なら補完できる
+                if (multiplier <= 0.5) {
+                    coveredTypes.push(attackType);
+                }
+
+                // 一貫タイプに対する4倍弱点を記録
+                if (multiplier >= 4) {
+                    fourTimesWeakTypes.push(attackType);
+                }
+
+            });
+
+            // 1タイプも補完できない候補は除外
+            if (coveredTypes.length === 0) {
+                return;
+            }
+
+            candidates.push({
+                name: pokemonName,
+                types: info.types,
+                ability: ability,
+                coveredTypes: coveredTypes,
+                fourTimesWeakTypes: fourTimesWeakTypes
+            });
+
+        });
+
+    });
+
+    // 補完できるタイプ数が多い順
+    // 同数なら一貫タイプへの4倍弱点が少ない順
+    candidates.sort(function(a, b) {
+
+        if (b.coveredTypes.length !== a.coveredTypes.length) {
+            return b.coveredTypes.length - a.coveredTypes.length;
+        }
+
+        if (a.fourTimesWeakTypes.length !== b.fourTimesWeakTypes.length) {
+            return a.fourTimesWeakTypes.length - b.fourTimesWeakTypes.length;
+        }
+
+        return a.name.localeCompare(b.name, 'ja');
+
+    });
+
+    // 上位10件だけ表示
+    const topCandidates = candidates.slice(0, 10);
+
+    if (topCandidates.length === 0) {
+        html += '<div class="warning">条件に合うポケモンが見つかりませんでした。</div>';
+    }
+
+    topCandidates.forEach(function(candidate, index) {
+
+        const typeText = candidate.types.map(function(type) {
+            return `<span class="type-badge type-${type}">${getTypeNameJP(type)}</span>`;
+        }).join(' ');
+
+        const coveredText = candidate.coveredTypes.map(function(type) {
+            return `<span class="type-badge type-${type}">${getTypeNameJP(type)}</span>`;
+        }).join(' ');
+
+        const fourTimesText = candidate.fourTimesWeakTypes.length > 0
+            ? candidate.fourTimesWeakTypes.map(function(type) {
+                return `<span class="type-badge type-${type}">${getTypeNameJP(type)}</span>`;
+            }).join(' ')
+            : 'なし';
+
+        html += '<div class="combo-result">';
+
+        html += `<strong>${index + 1}. ${candidate.name}</strong>`;
+
+        html += `<div>タイプ：${typeText}</div>`;
+
+        html += `<div>特性：${candidate.ability || '未登録'}</div>`;
+
+        html += `<div>補完できるタイプ（${candidate.coveredTypes.length}）：${coveredText}</div>`;
+
+        html += `<div>一貫タイプへの4倍弱点：${fourTimesText}</div>`;
+
+        html += '</div>';
+
+    });
+
+    html += '</div>';
+
+    return html;
+}
 function displaySinglePartyAnalysis(label, party, analysis) {
     if (party.length === 0) {
         return `<div class="warning">⚠️ ${label}のパーティには入力がありません。</div>`;
