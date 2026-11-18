@@ -1237,7 +1237,7 @@ function createSideContent(id, party, analysis, label) {
 
 function displayDefenseRecommendations(party, analysis) {
 
-    // 現在のパーティで一貫している攻撃タイプを取得
+    // 現在のパーティで一貫している攻撃タイプ
     const consistentTypes = Object.keys(analysis.typeStatus).filter(function(type) {
         return analysis.typeStatus[type].isConsistent;
     });
@@ -1245,21 +1245,20 @@ function displayDefenseRecommendations(party, analysis) {
     let html = '<div class="result-section">';
     html += '<h4>🛡️ 防御補完おすすめ</h4>';
 
-    // 一貫タイプがなければ終了
     if (consistentTypes.length === 0) {
         html += '<div class="success">✅ 現在、一貫しているタイプはありません。</div>';
         html += '</div>';
         return html;
     }
 
-    // 現在のパーティにいるポケモン名
+    // 現在のパーティにいるポケモン
     const existingNames = party.map(function(pokemon) {
         return pokemon.name;
     });
 
     const candidates = [];
 
-    // 登録されている全ポケモンを調べる
+    // 登録済みポケモンを調べる
     Object.keys(pokemonDatabase).forEach(function(pokemonName) {
 
         const info = pokemonDatabase[pokemonName];
@@ -1268,16 +1267,18 @@ function displayDefenseRecommendations(party, analysis) {
             return;
         }
 
-        // すでにパーティにいるポケモンは除外
+        // パーティにいるポケモンは除外
         if (existingNames.includes(pokemonName)) {
             return;
         }
 
-        // 特性ごとに別候補として調べる
         const abilities = Array.isArray(info.abilities) && info.abilities.length > 0
             ? [...new Set(info.abilities)]
             : [''];
 
+        const abilityEvaluations = [];
+
+        // 特性ごとに評価
         abilities.forEach(function(ability) {
 
             const candidatePokemon = {
@@ -1289,7 +1290,6 @@ function displayDefenseRecommendations(party, analysis) {
             const coveredTypes = [];
             const fourTimesWeakTypes = [];
 
-            // 現在の一貫タイプを受けられるか調べる
             consistentTypes.forEach(function(attackType) {
 
                 const multiplier = getTypeMultiplierWithAbility(
@@ -1297,26 +1297,17 @@ function displayDefenseRecommendations(party, analysis) {
                     candidatePokemon
                 );
 
-                // 半減以下なら補完できる
                 if (multiplier <= 0.5) {
                     coveredTypes.push(attackType);
                 }
 
-                // 一貫タイプに対する4倍弱点を記録
                 if (multiplier >= 4) {
                     fourTimesWeakTypes.push(attackType);
                 }
 
             });
 
-            // 1タイプも補完できない候補は除外
-            if (coveredTypes.length === 0) {
-                return;
-            }
-
-            candidates.push({
-                name: pokemonName,
-                types: info.types,
+            abilityEvaluations.push({
                 ability: ability,
                 coveredTypes: coveredTypes,
                 fourTimesWeakTypes: fourTimesWeakTypes
@@ -1324,10 +1315,40 @@ function displayDefenseRecommendations(party, analysis) {
 
         });
 
+        // 最も評価の高い特性を選ぶ
+        abilityEvaluations.sort(function(a, b) {
+
+            if (b.coveredTypes.length !== a.coveredTypes.length) {
+                return b.coveredTypes.length - a.coveredTypes.length;
+            }
+
+            if (a.fourTimesWeakTypes.length !== b.fourTimesWeakTypes.length) {
+                return a.fourTimesWeakTypes.length - b.fourTimesWeakTypes.length;
+            }
+
+            return 0;
+
+        });
+
+        const bestEvaluation = abilityEvaluations[0];
+
+        // どの特性でも補完できない場合は除外
+        if (!bestEvaluation || bestEvaluation.coveredTypes.length === 0) {
+            return;
+        }
+
+        candidates.push({
+            name: pokemonName,
+            types: info.types,
+            bestAbility: bestEvaluation.ability,
+            coveredTypes: bestEvaluation.coveredTypes,
+            fourTimesWeakTypes: bestEvaluation.fourTimesWeakTypes,
+            abilityEvaluations: abilityEvaluations
+        });
+
     });
 
-    // 補完できるタイプ数が多い順
-    // 同数なら一貫タイプへの4倍弱点が少ない順
+    // ポケモンごとに順位を決定
     candidates.sort(function(a, b) {
 
         if (b.coveredTypes.length !== a.coveredTypes.length) {
@@ -1342,7 +1363,7 @@ function displayDefenseRecommendations(party, analysis) {
 
     });
 
-    // 上位10件だけ表示
+    // 上位10匹
     const topCandidates = candidates.slice(0, 10);
 
     if (topCandidates.length === 0) {
@@ -1371,12 +1392,41 @@ function displayDefenseRecommendations(party, analysis) {
 
         html += `<div>タイプ：${typeText}</div>`;
 
-        html += `<div>特性：${candidate.ability || '未登録'}</div>`;
+        html += `<div>おすすめ特性：<strong>${candidate.bestAbility || '未登録'}</strong></div>`;
 
         html += `<div>補完できるタイプ（${candidate.coveredTypes.length}）：${coveredText}</div>`;
 
         html += `<div>一貫タイプへの4倍弱点：${fourTimesText}</div>`;
 
+        // 特性ごとの評価を表示
+        html += '<div style="margin-top:8px;">';
+        html += '<strong>特性ごとの評価</strong>';
+
+        candidate.abilityEvaluations.forEach(function(evaluation) {
+
+            const abilityFourTimesText = evaluation.fourTimesWeakTypes.length > 0
+                ? evaluation.fourTimesWeakTypes.map(function(type) {
+                    return getTypeNameJP(type);
+                }).join('・')
+                : 'なし';
+
+            html += `<div style="font-size:0.9em; margin-top:4px;">`;
+
+            html += `${evaluation.ability || '特性未登録'}：`;
+
+            html += `補完${evaluation.coveredTypes.length}タイプ`;
+
+            html += ` / 4倍弱点：${abilityFourTimesText}`;
+
+            if (evaluation.ability === candidate.bestAbility) {
+                html += ' ⭐';
+            }
+
+            html += '</div>';
+
+        });
+
+        html += '</div>';
         html += '</div>';
 
     });
