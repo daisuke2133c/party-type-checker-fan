@@ -1402,8 +1402,14 @@ function displaySinglePartyAnalysis(label, party, analysis) {
     });
 
     html += '</div></div>';
-    html += displayTypeWeaknessTable(label, analysis);
-    return html;
+html += displayTypeWeaknessTable(label, analysis);
+
+// 自分のパーティが6匹未満の場合だけ表示
+if (label === '自分' && party.length < 6) {
+    html += displayDefenseRecommendations(party, analysis);
+}
+
+return html;
 }
 
 // 3体組み合わせ
